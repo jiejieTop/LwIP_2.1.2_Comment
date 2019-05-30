@@ -107,12 +107,12 @@
 static u16_t ip_id;
 
 #if LWIP_MULTICAST_TX_OPTIONS
-/** The default netif used for multicast */
+/**用于多播的默认netif */
 static struct netif *ip4_default_multicast_netif;
 
 /**
  * @ingroup ip4
- * Set a default netif for IPv4 multicast. */
+ * 为IPv4多播设置默认netif */
 void
 ip4_set_default_multicast_netif(struct netif *default_multicast_netif)
 {
@@ -139,15 +139,14 @@ ip4_route_src(const ip4_addr_t *src, const ip4_addr_t *dest)
 }
 #endif /* LWIP_HOOK_IP4_ROUTE_SRC */
 
+
 /**
- * Finds the appropriate network interface for a given IP address. It
- * searches the list of network interfaces linearly. A match is found
- * if the masked IP address of the network interface equals the masked
- * IP address given to the function.
+ *为给定的IP地址查找适当的网络接口。
+ *它搜索网络接口列表。找到匹配项
  *
- * @param dest the destination IP address for which to find the route
- * @return the netif on which to send to reach dest
- */
+ *@param dest 要查找路由的目标IP地址
+ *@return 发送到达目的地的网卡 netif
+ */ 
 struct netif *
 ip4_route(const ip4_addr_t *dest)
 {
@@ -157,7 +156,7 @@ ip4_route(const ip4_addr_t *dest)
   LWIP_ASSERT_CORE_LOCKED();
 
 #if LWIP_MULTICAST_TX_OPTIONS
-  /* Use administratively selected interface for multicast by default */
+  /*默认使用管理选择的接口进行多播*/
   if (ip4_addr_ismulticast(dest) && ip4_default_multicast_netif) {
     return ip4_default_multicast_netif;
   }
@@ -166,31 +165,31 @@ ip4_route(const ip4_addr_t *dest)
   /* bug #54569: in case LWIP_SINGLE_NETIF=1 and LWIP_DEBUGF() disabled, the following loop is optimized away */
   LWIP_UNUSED_ARG(dest);
 
-  /* iterate through netifs */
+  /*遍历网卡列表netif_list */
   NETIF_FOREACH(netif) {
-    /* is the netif up, does it have a link and a valid address? */
+    /* 如果网卡已经挂载并且IP地址是有效的 */
     if (netif_is_up(netif) && netif_is_link_up(netif) && !ip4_addr_isany_val(*netif_ip4_addr(netif))) {
-      /* network mask matches? */
+      /* 网络掩码匹配? */
       if (ip4_addr_netcmp(dest, netif_ip4_addr(netif), netif_ip4_netmask(netif))) {
-        /* return netif on which to forward IP packet */
+        /* 返回找到的网卡netif */
         return netif;
       }
-      /* gateway matches on a non broadcast interface? (i.e. peer in a point to point interface) */
+      /* 网关在非广播接口上匹配？ （即在点对点接口中对等） */
       if (((netif->flags & NETIF_FLAG_BROADCAST) == 0) && ip4_addr_cmp(dest, netif_ip4_gw(netif))) {
-        /* return netif on which to forward IP packet */
+        /* 返回找到的网卡netif */
         return netif;
       }
     }
   }
 
-#if LWIP_NETIF_LOOPBACK && !LWIP_HAVE_LOOPIF
+#if LWIP_NETIF_LOOPBACK && !LWIP_HAVE_LOOPIF    /**如果打开环回地址的宏定义 */
   /* loopif is disabled, looopback traffic is passed through any netif */
   if (ip4_addr_isloopback(dest)) {
-    /* don't check for link on loopback traffic */
+    /*不检查环回流量的链接*/ 
     if (netif_default != NULL && netif_is_up(netif_default)) {
       return netif_default;
     }
-    /* default netif is not up, just use any netif for loopback traffic */
+    /*默认netif没有启动，只需使用任何netif进行环回流量*/ 
     NETIF_FOREACH(netif) {
       if (netif_is_up(netif)) {
         return netif;
@@ -215,8 +214,7 @@ ip4_route(const ip4_addr_t *dest)
 
   if ((netif_default == NULL) || !netif_is_up(netif_default) || !netif_is_link_up(netif_default) ||
       ip4_addr_isany_val(*netif_ip4_addr(netif_default)) || ip4_addr_isloopback(dest)) {
-    /* No matching netif found and default netif is not usable.
-       If this is not good enough for you, use LWIP_HOOK_IP4_ROUTE() */
+    /*找不到匹配的netif，默认的netif不可用。建议使用LWIP_HOOK_IP4_ROUTE（）*/ 
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_route: No route to %"U16_F".%"U16_F".%"U16_F".%"U16_F"\n",
                 ip4_addr1_16(dest), ip4_addr2_16(dest), ip4_addr3_16(dest), ip4_addr4_16(dest)));
     IP_STATS_INC(ip.rterr);
@@ -227,7 +225,7 @@ ip4_route(const ip4_addr_t *dest)
   return netif_default;
 }
 
-#if IP_FORWARD
+#if IP_FORWARD      //启用跨网络转发IP数据包的功能
 /**
  * Determine whether an IP address is in a reserved set of addresses
  * that may not be forwarded, or whether datagrams to that destination
@@ -369,7 +367,7 @@ return_noroute:
 }
 #endif /* IP_FORWARD */
 
-/** Return true if the current input packet should be accepted on this netif */
+/** 如果在此netif上接受当前输入数据包，则返回true */
 static int
 ip4_input_accept(struct netif *netif)
 {
@@ -379,11 +377,11 @@ ip4_input_accept(struct netif *netif)
                          ip4_addr_get_u32(netif_ip4_addr(netif)) & ip4_addr_get_u32(netif_ip4_netmask(netif)),
                          ip4_addr_get_u32(ip4_current_dest_addr()) & ~ip4_addr_get_u32(netif_ip4_netmask(netif))));
 
-  /* interface is up and configured? */
+  /* 网卡已经挂载并且配置？ */
   if ((netif_is_up(netif)) && (!ip4_addr_isany_val(*netif_ip4_addr(netif)))) {
-    /* unicast to this interface address? */
+    /* 单播到这个接口地址？ */
     if (ip4_addr_cmp(ip4_current_dest_addr(), netif_ip4_addr(netif)) ||
-        /* or broadcast on this interface network address? */
+        /* 或在此接口网络地址上广播？ */
         ip4_addr_isbroadcast(ip4_current_dest_addr(), netif)
 #if LWIP_NETIF_LOOPBACK && !LWIP_HAVE_LOOPIF
         || (ip4_addr_get_u32(ip4_current_dest_addr()) == PP_HTONL(IPADDR_LOOPBACK))
@@ -391,12 +389,12 @@ ip4_input_accept(struct netif *netif)
        ) {
       LWIP_DEBUGF(IP_DEBUG, ("ip4_input: packet accepted on interface %c%c\n",
                              netif->name[0], netif->name[1]));
-      /* accept on this netif */
+      /* 接受这个netif  */
       return 1;
     }
 #if LWIP_AUTOIP
-    /* connections to link-local addresses must persist after changing
-        the netif's address (RFC3927 ch. 1.9) */
+    /*链接本地地址的连接必须在更改后保留
+            netif的地址（RFC3927 ch.1.9）*/
     if (autoip_accept_packet(netif, ip4_current_dest_addr())) {
       LWIP_DEBUGF(IP_DEBUG, ("ip4_input: LLA packet accepted on interface %c%c\n",
                              netif->name[0], netif->name[1]));
@@ -408,20 +406,18 @@ ip4_input_accept(struct netif *netif)
   return 0;
 }
 
+
 /**
- * This function is called by the network interface device driver when
- * an IP packet is received. The function does the basic checks of the
- * IP header such as packet size being at least larger than the header
- * size etc. If the packet was not destined for us, the packet is
- * forwarded (using ip_forward). The IP checksum is always checked.
+ * 当收到IP数据包的时候这个函数由网络接口​​设备驱动程序调用
+ * 该功能对IP报头进行基本检查，例如数据包大小至少大于报头大小等
+ * 如果数据包不是发给我们的，则转发数据包（使用ip_forward），始终检查IP校验和。
  *
- * Finally, the packet is sent to the upper layer protocol input function.
+ * 最后，数据包被递交到到上层协议。
  *
- * @param p the received IP packet (p->payload points to IP header)
- * @param inp the netif on which this packet was received
- * @return ERR_OK if the packet was processed (could return ERR_* if it wasn't
- *         processed, but currently always returns ERR_OK)
- */
+ * @param p 收到的IP数据包（p->有效负载指向IP头）
+ * @param inp 收到此数据包的网卡netif
+ * @return ERR_OK 如果数据包被处理（如果没有正确被处理则可以返回ERR_ *，但目前始终返回ERR_OK
+ */ 
 err_t
 ip4_input(struct pbuf *p, struct netif *inp)
 {
@@ -441,7 +437,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
   IP_STATS_INC(ip.recv);
   MIB2_STATS_INC(mib2.ipinreceives);
 
-  /* identify the IP header */
+  /* 识别IP数据报首部 */
   iphdr = (struct ip_hdr *)p->payload;
   if (IPH_V(iphdr) != 4) {
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_WARNING, ("IP packet dropped due to bad version number %"U16_F"\n", (u16_t)IPH_V(iphdr)));
@@ -460,17 +456,17 @@ ip4_input(struct pbuf *p, struct netif *inp)
   }
 #endif
 
-  /* obtain IP header length in bytes */
+  /* 以字节为单位获取IP头长度 */
   iphdr_hlen = IPH_HL_BYTES(iphdr);
-  /* obtain ip length in bytes */
+  /* 以字节为单位获取数据报总长度 */
   iphdr_len = lwip_ntohs(IPH_LEN(iphdr));
 
-  /* Trim pbuf. This is especially required for packets < 60 bytes. */
+  /* 修剪pbuf。 对于<60字节的数据包尤其如此 */
   if (iphdr_len < p->tot_len) {
     pbuf_realloc(p, iphdr_len);
   }
 
-  /* header length exceeds first pbuf length, or ip length exceeds total pbuf length? */
+  /* 标头长度超过第一个pbuf长度，或者ip长度超过总pbuf长度？ */
   if ((iphdr_hlen > p->len) || (iphdr_len > p->tot_len) || (iphdr_hlen < IP_HLEN)) {
     if (iphdr_hlen < IP_HLEN) {
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
@@ -486,7 +482,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
                   ("IP (len %"U16_F") is longer than pbuf (len %"U16_F"), IP packet dropped.\n",
                    iphdr_len, p->tot_len));
     }
-    /* free (drop) packet pbufs */
+    /* 释放数据包 */
     pbuf_free(p);
     IP_STATS_INC(ip.lenerr);
     IP_STATS_INC(ip.drop);
@@ -494,7 +490,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
     return ERR_OK;
   }
 
-  /* verify checksum */
+  /* 验证校验和 */
 #if CHECKSUM_CHECK_IP
   IF__NETIF_CHECKSUM_ENABLED(inp, NETIF_CHECKSUM_CHECK_IP) {
     if (inet_chksum(iphdr, iphdr_hlen) != 0) {
@@ -511,15 +507,15 @@ ip4_input(struct pbuf *p, struct netif *inp)
   }
 #endif
 
-  /* copy IP addresses to aligned ip_addr_t */
+  /* 将源IP地址与目标IP地址复制到对齐的ip_data*/
   ip_addr_copy_from_ip4(ip_data.current_iphdr_dest, iphdr->dest);
   ip_addr_copy_from_ip4(ip_data.current_iphdr_src, iphdr->src);
 
-  /* match packet against an interface, i.e. is this packet for us? */
+  /* 匹配网卡的数据包，即查看一下这个包是不是发给我们的 */
   if (ip4_addr_ismulticast(ip4_current_dest_addr())) {
 #if LWIP_IGMP
     if ((inp->flags & NETIF_FLAG_IGMP) && (igmp_lookfor_group(inp, ip4_current_dest_addr()))) {
-      /* IGMP snooping switches need 0.0.0.0 to be allowed as source address (RFC 4541) */
+      /* IGMP Snooping交换机需要0.0.0.0作为源地址（RFC 4541） */
       ip4_addr_t allsystems;
       IP4_ADDR(&allsystems, 224, 0, 0, 1);
       if (ip4_addr_cmp(ip4_current_dest_addr(), &allsystems) &&
@@ -538,8 +534,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
     }
 #endif /* LWIP_IGMP */
   } else {
-    /* start trying with inp. if that's not acceptable, start walking the
-       list of configured netifs. */
+    /* 开始尝试使用inp。 如果这是不可接受的，请开始遍历已配置的netifs列表。 */
     if (ip4_input_accept(inp)) {
       netif = inp;
     } else {
