@@ -540,9 +540,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
     } else {
       netif = NULL;
 #if !LWIP_NETIF_LOOPBACK || LWIP_HAVE_LOOPIF
-      /* Packets sent to the loopback address must not be accepted on an
-       * interface that does not have the loopback address assigned to it,
-       * unless a non-loopback interface is used for loopback traffic. */
+      /* 检查一下目标IP地址是否是环回地址 */
       if (!ip4_addr_isloopback(ip4_current_dest_addr()))
 #endif /* !LWIP_NETIF_LOOPBACK || LWIP_HAVE_LOOPIF */
       {
@@ -562,17 +560,9 @@ ip4_input(struct pbuf *p, struct netif *inp)
   }
 
 #if IP_ACCEPT_LINK_LAYER_ADDRESSING
-  /* Pass DHCP messages regardless of destination address. DHCP traffic is addressed
-   * using link layer addressing (such as Ethernet MAC) so we must not filter on IP.
-   * According to RFC 1542 section 3.1.1, referred by RFC 2131).
-   *
-   * If you want to accept private broadcast communication while a netif is down,
-   * define LWIP_IP_ACCEPT_UDP_PORT(dst_port), e.g.:
-   *
-   * #define LWIP_IP_ACCEPT_UDP_PORT(dst_port) ((dst_port) == PP_NTOHS(12345))
-   */
+  /* 使用链路层寻址（如以太网MAC）*/
   if (netif == NULL) {
-    /* remote port is DHCP server? */
+    /* 远程端口是DHCP服务器？ */ 
     if (IPH_PROTO(iphdr) == IP_PROTO_UDP) {
       const struct udp_hdr *udphdr = (const struct udp_hdr *)((const u8_t *)iphdr + iphdr_hlen);
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE, ("ip4_input: UDP packet to DHCP client port %"U16_F"\n",
