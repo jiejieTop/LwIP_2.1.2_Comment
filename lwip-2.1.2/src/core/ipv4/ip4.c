@@ -576,11 +576,11 @@ ip4_input(struct pbuf *p, struct netif *inp)
   }
 #endif /* IP_ACCEPT_LINK_LAYER_ADDRESSING */
 
-  /* broadcast or multicast packet source address? Compliant with RFC 1122: 3.2.1.3 */
+  /* 是广播或组播数据包？  */
 #if LWIP_IGMP || IP_ACCEPT_LINK_LAYER_ADDRESSING
   if (check_ip_src
 #if IP_ACCEPT_LINK_LAYER_ADDRESSING
-      /* DHCP servers need 0.0.0.0 to be allowed as source address (RFC 1.1.2.2: 3.2.1.3/a) */
+      /* DHCP服务器需要0.0.0.0作为源地址（参考RFC 1.1.2.2：3.2.1.3/a） */
       && !ip4_addr_isany_val(*ip4_current_src_addr())
 #endif /* IP_ACCEPT_LINK_LAYER_ADDRESSING */
      )
@@ -588,9 +588,9 @@ ip4_input(struct pbuf *p, struct netif *inp)
   {
     if ((ip4_addr_isbroadcast(ip4_current_src_addr(), inp)) ||
         (ip4_addr_ismulticast(ip4_current_src_addr()))) {
-      /* packet source is not valid */
+      /* 数据包源无效 */
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_WARNING, ("ip4_input: packet source is not valid.\n"));
-      /* free (drop) packet pbufs */
+      /* 丢弃数据包 */
       pbuf_free(p);
       IP_STATS_INC(ip.drop);
       MIB2_STATS_INC(mib2.ipinaddrerrors);
@@ -599,14 +599,14 @@ ip4_input(struct pbuf *p, struct netif *inp)
     }
   }
 
-  /* packet not for us? */
+  /* 如果不是给我们的数据包 */
   if (netif == NULL) {
-    /* packet not for us, route or discard */
+    /* 路由转发出去或者丢掉数据包 */
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE, ("ip4_input: packet not for us.\n"));
 #if IP_FORWARD
-    /* non-broadcast packet? */
+    /* 非广播包 */
     if (!ip4_addr_isbroadcast(ip4_current_dest_addr(), inp)) {
-      /* try to forward IP packet on (other) interfaces */
+      /* 尝试在（其他）网络接口上转发IP数据包 */
       ip4_forward(p, (struct ip_hdr *)p->payload, inp);
     } else
 #endif /* IP_FORWARD */
@@ -618,14 +618,14 @@ ip4_input(struct pbuf *p, struct netif *inp)
     pbuf_free(p);
     return ERR_OK;
   }
-  /* packet consists of multiple fragments? */
+  /* 数据包由多个分组（分片）组成？ */
   if ((IPH_OFFSET(iphdr) & PP_HTONS(IP_OFFMASK | IP_MF)) != 0) {
 #if IP_REASSEMBLY /* packet fragment reassembly code present? */
     LWIP_DEBUGF(IP_DEBUG, ("IP packet is a fragment (id=0x%04"X16_F" tot_len=%"U16_F" len=%"U16_F" MF=%"U16_F" offset=%"U16_F"), calling ip4_reass()\n",
                            lwip_ntohs(IPH_ID(iphdr)), p->tot_len, lwip_ntohs(IPH_LEN(iphdr)), (u16_t)!!(IPH_OFFSET(iphdr) & PP_HTONS(IP_MF)), (u16_t)((lwip_ntohs(IPH_OFFSET(iphdr)) & IP_OFFMASK) * 8)));
     /* reassemble the packet*/
     p = ip4_reass(p);
-    /* packet not fully reassembled yet? */
+    /* 数据包没有完全重组？*/
     if (p == NULL) {
       return ERR_OK;
     }
