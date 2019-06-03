@@ -716,7 +716,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
           /* 如果没有对应的上层协议（非广播包），则返回一个ICMP包，目标协议不可搭 */
           if (!ip4_addr_isbroadcast(ip4_current_dest_addr(), netif) &&
               !ip4_addr_ismulticast(ip4_current_dest_addr())) {
-            pbuf_header_force(p, (s16_t)iphdr_hlen); /* 获取ip数据报头部，无需检查 */
+            pbuf_header_force(p, (s16_t)iphdr_hlen); /* 获取ip数据报首部，无需检查 */
             icmp_dest_unreach(p, ICMP_DUR_PROTO);
           }
 #endif /* LWIP_ICMP */
@@ -744,7 +744,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
 }
 
 /**
- * 在网络接口上发送IP数据包。这个函数构造IP头部并计算IP头校验和，
+ * 在网络接口上发送IP数据包。这个函数构造IP数据包首部并计算IP头校验和，
  * 如果源IP地址为NULL，在发送的时候就填写发送网卡的IP地址为源IP地址
  * 如果目标IP地址是LWIP_IP_HDRINCL，则假定pbuf已经存在包括IP头和有效负载指向它而不是数据。
  * 
@@ -833,7 +833,7 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 
   MIB2_STATS_INC(mib2.ipoutrequests);
 
-  /* 应该要构建IP头部还是已经包含在pbuf中了？ */
+  /* 应该要构建IP首部还是已经包含在pbuf中了？如果是要构建IP数据报首部 */
   if (dest != LWIP_IP_HDRINCL) {
     u16_t ip_hlen = IP_HLEN;
 #if IP_OPTIONS_SEND
@@ -871,7 +871,7 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 #endif /* CHECKSUM_GEN_IP_INLINE */
     }
 #endif /* IP_OPTIONS_SEND */
-    /* generate IP header */
+    /* 生成IP头 */
     if (pbuf_add_header(p, IP_HLEN)) {
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_output: not enough room for IP header in pbuf\n"));
 
@@ -890,8 +890,8 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
     chk_sum += PP_NTOHS(proto | (ttl << 8));
 #endif /* CHECKSUM_GEN_IP_INLINE */
 
-    /* dest cannot be NULL here */
-    ip4_addr_copy(iphdr->dest, *dest);
+    /* 构建目的IP地址，此处的目的IP地址不能为NULL */
+    ip4_addr_copy(iphdr->dest, *dest);  
 #if CHECKSUM_GEN_IP_INLINE
     chk_sum += ip4_addr_get_u32(&iphdr->dest) & 0xFFFF;
     chk_sum += ip4_addr_get_u32(&iphdr->dest) >> 16;
@@ -914,9 +914,9 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
     ++ip_id;
 
     if (src == NULL) {
-      ip4_addr_copy(iphdr->src, *IP4_ADDR_ANY4);
+      ip4_addr_copy(iphdr->src, *IP4_ADDR_ANY4);    /** 构建源IP地址 */
     } else {
-      /* src cannot be NULL here */
+      /* 此处的源IP地址不能为NULL */
       ip4_addr_copy(iphdr->src, *src);
     }
 
@@ -943,15 +943,16 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 #endif /* CHECKSUM_GEN_IP */
 #endif /* CHECKSUM_GEN_IP_INLINE */
   } else {
-    /* IP header already included in p */
-    if (p->len < IP_HLEN) {
+    /* IP头已包含在pbuf中 */
+    if (p->len < IP_HLEN) {   
+      /** pbuf的长度小于IP数据报首部长度(20字节) */
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_output: LWIP_IP_HDRINCL but pbuf is too short\n"));
       IP_STATS_INC(ip.err);
       MIB2_STATS_INC(mib2.ipoutdiscards);
       return ERR_BUF;
     }
-    iphdr = (struct ip_hdr *)p->payload;
-    ip4_addr_copy(dest_addr, iphdr->dest);
+    iphdr = (struct ip_hdr *)p->payload;    /** 直接从数据区域获取IP数据报首部 */
+    ip4_addr_copy(dest_addr, iphdr->dest);  /** 获取目的IP地址 */
     dest = &dest_addr;
   }
 
@@ -960,13 +961,13 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
   LWIP_DEBUGF(IP_DEBUG, ("ip4_output_if: %c%c%"U16_F"\n", netif->name[0], netif->name[1], (u16_t)netif->num));
   ip4_debug_print(p);
 
-#if ENABLE_LOOPBACK
+#if ENABLE_LOOPBACK   /** 换回接口 */
   if (ip4_addr_cmp(dest, netif_ip4_addr(netif))
 #if !LWIP_HAVE_LOOPIF
       || ip4_addr_isloopback(dest)
 #endif /* !LWIP_HAVE_LOOPIF */
      ) {
-    /* Packet to self, enqueue it for loopback */
+    /* 数据包是给自己的，将其放入环回接口 */
     LWIP_DEBUGF(IP_DEBUG, ("netif_loop_output()"));
     return netif_loop_output(netif, p);
   }
@@ -977,14 +978,14 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 #endif /* LWIP_MULTICAST_TX_OPTIONS */
 #endif /* ENABLE_LOOPBACK */
 #if IP_FRAG
-  /* don't fragment if interface has mtu set to 0 [loopif] */
+  /** 要发送的数据报大于mtu，需要分片，此处的前提是使能了IP_FRAG (IP分片) */
   if (netif->mtu && (p->tot_len > netif->mtu)) {
-    return ip4_frag(p, netif, dest);
+    return ip4_frag(p, netif, dest);  /** 调用IP数据报分片函数将数据报分片发送出去 */
   }
 #endif /* IP_FRAG */
 
   LWIP_DEBUGF(IP_DEBUG, ("ip4_output_if: call netif->output()\n"));
-  return netif->output(netif, p, dest);
+  return netif->output(netif, p, dest);   /** 如果不需要分片就直接通过网卡发送出去，netif->output() */
 }
 
 /**
