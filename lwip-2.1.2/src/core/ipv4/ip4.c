@@ -636,7 +636,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
                 lwip_ntohs(IPH_OFFSET(iphdr))));
     IP_STATS_INC(ip.opterr);
     IP_STATS_INC(ip.drop);
-    /* unsupported protocol feature */
+    /* 不支持的协议功能 */
     MIB2_STATS_INC(mib2.ipinunknownprotos);
     return ERR_OK;
 #endif /* IP_REASSEMBLY */
@@ -660,7 +660,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
   }
 #endif /* IP_OPTIONS_ALLOWED == 0 */
 
-  /* send to upper layers */
+  /* 递交到上层协议 */
   LWIP_DEBUGF(IP_DEBUG, ("ip4_input: \n"));
   ip4_debug_print(p);
   LWIP_DEBUGF(IP_DEBUG, ("ip4_input: p->len %"U16_F" p->tot_len %"U16_F"\n", p->len, p->tot_len));
@@ -671,16 +671,16 @@ ip4_input(struct pbuf *p, struct netif *inp)
   ip_data.current_ip_header_tot_len = IPH_HL_BYTES(iphdr);
 
 #if LWIP_RAW
-  /* raw input did not eat the packet? */
+  /* 原始输入层没有获取这个数据包，则通过数据包中的协议递交到上层 */
   raw_status = raw_input(p, inp);
   if (raw_status != RAW_INPUT_EATEN)
 #endif /* LWIP_RAW */
   {
-    pbuf_remove_header(p, iphdr_hlen); /* Move to payload, no check necessary. */
+    pbuf_remove_header(p, iphdr_hlen); /* 移动pbuf的指针，指向数据区域指针(相当于提取上层协议的报文) */
 
     switch (IPH_PROTO(iphdr)) {
 #if LWIP_UDP
-      case IP_PROTO_UDP:
+      case IP_PROTO_UDP:    /** 如果上层协议是UDP协议，则通过udp_input()递交到上层 */
 #if LWIP_UDPLITE
       case IP_PROTO_UDPLITE:
 #endif /* LWIP_UDPLITE */
@@ -689,34 +689,34 @@ ip4_input(struct pbuf *p, struct netif *inp)
         break;
 #endif /* LWIP_UDP */
 #if LWIP_TCP
-      case IP_PROTO_TCP:
+      case IP_PROTO_TCP:       /** 如果上层协议是TCP协议，则通过tcp_input()递交到上层 */
         MIB2_STATS_INC(mib2.ipindelivers);
         tcp_input(p, inp);
         break;
 #endif /* LWIP_TCP */
 #if LWIP_ICMP
-      case IP_PROTO_ICMP:
+      case IP_PROTO_ICMP:      /** 如果上层协议是ICMP协议，则通过icmp_input()递交到上层 */
         MIB2_STATS_INC(mib2.ipindelivers);
         icmp_input(p, inp);
         break;
 #endif /* LWIP_ICMP */
 #if LWIP_IGMP
-      case IP_PROTO_IGMP:
+      case IP_PROTO_IGMP:     /** 如果上层协议是IGMP协议，则通过igmp_input()递交到上层 */
         igmp_input(p, inp, ip4_current_dest_addr());
         break;
 #endif /* LWIP_IGMP */
       default:
-#if LWIP_RAW
+#if LWIP_RAW        
         if (raw_status == RAW_INPUT_DELIVERED) {
           MIB2_STATS_INC(mib2.ipindelivers);
         } else
 #endif /* LWIP_RAW */
         {
 #if LWIP_ICMP
-          /* send ICMP destination protocol unreachable unless is was a broadcast */
+          /* 如果没有对应的上层协议（非广播包），则返回一个ICMP包，目标协议不可搭 */
           if (!ip4_addr_isbroadcast(ip4_current_dest_addr(), netif) &&
               !ip4_addr_ismulticast(ip4_current_dest_addr())) {
-            pbuf_header_force(p, (s16_t)iphdr_hlen); /* Move to ip header, no check necessary. */
+            pbuf_header_force(p, (s16_t)iphdr_hlen); /* 获取ip数据报头部，无需检查 */
             icmp_dest_unreach(p, ICMP_DUR_PROTO);
           }
 #endif /* LWIP_ICMP */
@@ -732,7 +732,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
     }
   }
 
-  /* @todo: this is not really necessary... */
+  /* @todo：这不是必要的......  */
   ip_data.current_netif = NULL;
   ip_data.current_input_netif = NULL;
   ip_data.current_ip4_header = NULL;
@@ -744,30 +744,25 @@ ip4_input(struct pbuf *p, struct netif *inp)
 }
 
 /**
- * Sends an IP packet on a network interface. This function constructs
- * the IP header and calculates the IP header checksum. If the source
- * IP address is NULL, the IP address of the outgoing network
- * interface is filled in as source address.
- * If the destination IP address is LWIP_IP_HDRINCL, p is assumed to already
- * include an IP header and p->payload points to it instead of the data.
+ * 在网络接口上发送IP数据包。这个函数构造IP头部并计算IP头校验和，
+ * 如果源IP地址为NULL，在发送的时候就填写发送网卡的IP地址为源IP地址
+ * 如果目标IP地址是LWIP_IP_HDRINCL，则假定pbuf已经存在包括IP头和有效负载指向它而不是数据。
+ * 
+ * @param p 要发送的数据包（p->payload（有效负载）指向数据，
+          如果dest == LWIP_IP_HDRINCL，则p已包含IP头和p->有效负载指向该IP头）
+ * @param src 要发送的源IP地址（如果src == IP4_ADDR_ANY，则为用于发送的netif的IP地址用作源地址）
+ * @param dest 目的IP地址
+ * @param ttl 要在IP标头中设置的TTL值(生存时间)
+ * @param用于在IP标头中设置的TOS值
+ * @param proto 将在IP头中设置对应的上层协议
+ * @param netif 发送此数据包的netif
+ * @return ERR_OK 如果数据包发送正常就返回ok
+ *         如果p没有足够的空间用于IP /LINK标头，则为ERR_BUF
+ *         其他则返回netif->output返回的错误
  *
- * @param p the packet to send (p->payload points to the data, e.g. next
-            protocol header; if dest == LWIP_IP_HDRINCL, p already includes an
-            IP header and p->payload points to that IP header)
- * @param src the source IP address to send from (if src == IP4_ADDR_ANY, the
- *         IP  address of the netif used to send is used as source address)
- * @param dest the destination IP address to send the packet to
- * @param ttl the TTL value to be set in the IP header
- * @param tos the TOS value to be set in the IP header
- * @param proto the PROTOCOL to be set in the IP header
- * @param netif the netif on which to send this packet
- * @return ERR_OK if the packet was sent OK
- *         ERR_BUF if p doesn't have enough space for IP/LINK headers
- *         returns errors returned by netif->output
- *
- * @note ip_id: RFC791 "some host may be able to simply use
- *  unique identifiers independent of destination"
- */
+ * @note ip_id：RFC791“某些主机可能只需使用
+ * 独立于目的地的唯一标识符“
+ */ 
 err_t
 ip4_output_if(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
               u8_t ttl, u8_t tos,
@@ -777,12 +772,13 @@ ip4_output_if(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
   return ip4_output_if_opt(p, src, dest, ttl, tos, proto, netif, NULL, 0);
 }
 
+
 /**
- * Same as ip_output_if() but with the possibility to include IP options:
+ * 与ip_output_if（）相同，但可以包含IP选项：
  *
- * @ param ip_options pointer to the IP options, copied into the IP header
- * @ param optlen length of ip_options
- */
+ * @param ip_options指向IP选项的指针，复制到IP头中
+ * @param optlen ip_options的长度
+ */ 
 err_t
 ip4_output_if_opt(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
                   u8_t ttl, u8_t tos, u8_t proto, struct netif *netif, void *ip_options,
@@ -804,10 +800,10 @@ ip4_output_if_opt(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
 #endif /* IP_OPTIONS_SEND */
 }
 
+
 /**
- * Same as ip_output_if() but 'src' address is not replaced by netif address
- * when it is 'any'.
- */
+ * 与ip_output_if()相同，当源地址是'IP4_ADDR_ANY'时，'src'地址不会被netif地址替换
+ */ 
 err_t
 ip4_output_if_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
                   u8_t ttl, u8_t tos,
@@ -818,9 +814,8 @@ ip4_output_if_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
 }
 
 /**
- * Same as ip_output_if_opt() but 'src' address is not replaced by netif address
- * when it is 'any'.
- */
+ * 与ip4_output_if_opt()相同，当源地址是'IP4_ADDR_ANY'时，'src'地址不会被netif地址替换
+ */ 
 err_t
 ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
                       u8_t ttl, u8_t tos, u8_t proto, struct netif *netif, void *ip_options,
@@ -838,7 +833,7 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 
   MIB2_STATS_INC(mib2.ipoutrequests);
 
-  /* Should the IP header be generated or is it already included in p? */
+  /* 应该要构建IP头部还是已经包含在pbuf中了？ */
   if (dest != LWIP_IP_HDRINCL) {
     u16_t ip_hlen = IP_HLEN;
 #if IP_OPTIONS_SEND
@@ -848,16 +843,16 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
       int i;
 #endif /* CHECKSUM_GEN_IP_INLINE */
       if (optlen > (IP_HLEN_MAX - IP_HLEN)) {
-        /* optlen too long */
+        /* 选项字段太长 */
         LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_output_if_opt: optlen too long\n"));
         IP_STATS_INC(ip.err);
         MIB2_STATS_INC(mib2.ipoutdiscards);
         return ERR_VAL;
       }
-      /* round up to a multiple of 4 */
+      /* 选项字段按照4字节对齐 */
       optlen_aligned = (u16_t)((optlen + 3) & ~3);
       ip_hlen = (u16_t)(ip_hlen + optlen_aligned);
-      /* First write in the IP options */
+      /* 首先写入IP选项字段 */
       if (pbuf_add_header(p, optlen_aligned)) {
         LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_output_if_opt: not enough room for IP options in pbuf\n"));
         IP_STATS_INC(ip.err);
@@ -866,7 +861,7 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
       }
       MEMCPY(p->payload, ip_options, optlen);
       if (optlen < optlen_aligned) {
-        /* zero the remaining bytes */
+        /* 剩余字节清零 */
         memset(((char *)p->payload) + optlen, 0, (size_t)(optlen_aligned - optlen));
       }
 #if CHECKSUM_GEN_IP_INLINE
