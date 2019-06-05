@@ -748,15 +748,14 @@ ip4_input(struct pbuf *p, struct netif *inp)
  * 如果源IP地址为NULL，在发送的时候就填写发送网卡的IP地址为源IP地址
  * 如果目标IP地址是LWIP_IP_HDRINCL，则假定pbuf已经存在包括IP头和有效负载指向它而不是数据。
  * 
- * @param p 要发送的数据包（p->payload（有效负载）指向数据，
-          如果dest == LWIP_IP_HDRINCL，则p已包含IP头和p->有效负载指向该IP头）
- * @param src 要发送的源IP地址（如果src == IP4_ADDR_ANY，则为用于发送的netif的IP地址用作源地址）
+ * @param p 要发送的数据包（p->payload（有效负载）指向数据，如果dest == LWIP_IP_HDRINCL，则p已包含IP头和p->有效负载指向该IP头）
+ * @param src 要发送的源IP地址（如果src == IP4_ADDR_ANY，则用发送的netif绑定的IP地址用作源地址）
  * @param dest 目的IP地址
  * @param ttl 要在IP标头中设置的TTL值(生存时间)
- * @param用于在IP标头中设置的TOS值
+ * @param tos 用于在IP标头中设置的TOS值
  * @param proto 将在IP头中设置对应的上层协议
  * @param netif 发送此数据包的netif
- * @return ERR_OK 如果数据包发送正常就返回ok
+ * @return ERR_OK 如果数据包发送正常就返回ok，
  *         如果p没有足够的空间用于IP /LINK标头，则为ERR_BUF
  *         其他则返回netif->output返回的错误
  *
@@ -988,23 +987,22 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
   return netif->output(netif, p, dest);   /** 如果不需要分片就直接通过网卡发送出去，netif->output() */
 }
 
+
 /**
- * Simple interface to ip_output_if. It finds the outgoing network
- * interface and calls upon ip_output_if to do the actual work.
+ * ip_output_if的简化版接口。它找到发送数据包的netif网络接口并调用ip_output_if来完成实际工作。
  *
- * @param p the packet to send (p->payload points to the data, e.g. next
-            protocol header; if dest == LWIP_IP_HDRINCL, p already includes an
-            IP header and p->payload points to that IP header)
- * @param src the source IP address to send from (if src == IP4_ADDR_ANY, the
- *         IP  address of the netif used to send is used as source address)
- * @param dest the destination IP address to send the packet to
- * @param ttl the TTL value to be set in the IP header
- * @param tos the TOS value to be set in the IP header
- * @param proto the PROTOCOL to be set in the IP header
- *
- * @return ERR_RTE if no route is found
- *         see ip_output_if() for more return values
- */
+ * @param p 要发送的数据包（p->payload（有效负载）指向数据，如果dest == LWIP_IP_HDRINCL，则p已包含IP头和p->有效负载指向该IP头）
+ * @param src 要发送的源IP地址（如果src == IP4_ADDR_ANY，则用发送的netif绑定的IP地址用作源地址）
+ * @param dest 目的IP地址
+ * @param ttl 要在IP标头中设置的TTL值(生存时间)
+ * @param tos 用于在IP标头中设置的TOS值
+ * @param proto 将在IP头中设置对应的上层协议
+ * @return ERR_OK 如果数据包发送正常就返回ok，
+ *         如果p没有足够的空间用于IP /LINK标头，则为ERR_BUF
+ *         其他则返回netif->output返回的错误
+ * @return ERR_RTE如果没有找到路线
+ * 请参阅ip_output_if（）以获取更多返回值
+ */ 
 err_t
 ip4_output(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
            u8_t ttl, u8_t tos, u8_t proto)
