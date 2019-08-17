@@ -1022,6 +1022,7 @@ ip4_output(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *dest,
 }
 
 #if LWIP_NETIF_USE_HINTS
+/** 与ip_output类似 */
 /** Like ip_output, but takes and addr_hint pointer that is passed on to netif->addr_hint
  *  before calling ip_output_if.
  *
