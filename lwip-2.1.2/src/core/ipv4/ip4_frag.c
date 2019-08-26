@@ -110,20 +110,20 @@ PACK_STRUCT_END
    ip4_addr_cmp(&(iphdrA)->dest, &(iphdrB)->dest) && \
    IPH_ID(iphdrA) == IPH_ID(iphdrB)) ? 1 : 0
 
-/* global variables */
+/*全局变量*/
 static struct ip_reassdata *reassdatagrams;
 static u16_t ip_reass_pbufcount;
 
-/* function prototypes */
+/*函数原型*/ 
 static void ip_reass_dequeue_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev);
 static int ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev);
 
 /**
- * Reassembly timer base function
- * for both NO_SYS == 0 and 1 (!).
+ * 重组计时器基本功能
+ * 对于NO_SYS == 0和1（！）。
  *
- * Should be called every 1000 msec (defined by IP_TMR_INTERVAL).
- */
+ * 应每1000毫秒调用一次（由IP_TMR_INTERVAL定义）。
+ */ 
 void
 ip_reass_tmr(void)
 {
@@ -131,35 +131,34 @@ ip_reass_tmr(void)
 
   r = reassdatagrams;
   while (r != NULL) {
-    /* Decrement the timer. Once it reaches 0,
-     * clean up the incomplete fragment assembly */
+    /*减少计时器数值。一旦达到0，则清理不完整的片段组件*/
     if (r->timer > 0) {
       r->timer--;
       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_tmr: timer dec %"U16_F"\n", (u16_t)r->timer));
       prev = r;
       r = r->next;
     } else {
-      /* reassembly timed out */
+      /* 重组发生超时 */ 
       struct ip_reassdata *tmp;
       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_tmr: timer timed out\n"));
       tmp = r;
-      /* get the next pointer before freeing */
+      /* 在释放前获取下一个指针 */
       r = r->next;
-      /* free the helper struct and all enqueued pbufs */
+      /* 释放辅助结构和所有入队的pbuf */
       ip_reass_free_complete_datagram(tmp, prev);
     }
   }
 }
 
 /**
- * Free a datagram (struct ip_reassdata) and all its pbufs.
- * Updates the total count of enqueued pbufs (ip_reass_pbufcount),
- * SNMP counters and sends an ICMP time exceeded packet.
+ * 释放数据报（struct ip_reassdata）及其所有pbuf。
+ * 更新入队pbufs的总数（ip_reass_pbufcount），
+ * SNMP计数并发送ICMP超时数据包。
  *
- * @param ipr datagram to free
- * @param prev the previous datagram in the linked list
- * @return the number of pbufs freed
- */
+ * @param ipr数据报免费
+ * @param在链表中显示以前的数据报
+ * @return释放的pbuf数量
+ */ 
 static int
 ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev)
 {
@@ -177,8 +176,8 @@ ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *p
 #if LWIP_ICMP
   iprh = (struct ip_reass_helper *)ipr->p->payload;
   if (iprh->start == 0) {
-    /* The first fragment was received, send ICMP time exceeded. */
-    /* First, de-queue the first pbuf from r->p. */
+    /* 收到第一个片段, send ICMP time exceeded. */
+    /* 首先，获取从 ipr-> p中排队第一个pbuf。*/
     p = ipr->p;
     ipr->p = iprh->next_pbuf;
     /* Then, copy the original header into it. */
@@ -494,11 +493,11 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
 }
 
 /**
- * Reassembles incoming IP fragments into an IP datagram.
+ * 将传入的IP片段重新组合为IP数据报。
  *
- * @param p points to a pbuf chain of the fragment
- * @return NULL if reassembly is incomplete, ? otherwise
- */
+ *@param p指向片段的pbuf链
+ *@return 如果重组不完整则返回NULL
+ */ 
 struct pbuf *
 ip4_reass(struct pbuf *p)
 {
