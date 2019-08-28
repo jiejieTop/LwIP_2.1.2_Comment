@@ -212,14 +212,14 @@ ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *p
 
 #if IP_REASS_FREE_OLDEST
 /**
- * Free the oldest datagram to make room for enqueueing new fragments.
- * The datagram 'fraghdr' belongs to is not freed!
+ * 释放最旧的数据报，为排队新片段腾出空间。
+ * 'fraghdr'所属的数据报未被释放！
  *
- * @param fraghdr IP header of the current fragment
- * @param pbufs_needed number of pbufs needed to enqueue
- *        (used for freeing other datagrams if not enough space)
- * @return the number of pbufs freed
- */
+ * @param fraghdr当前片段的IP头
+ * @param pbufs_needed排队所需的pbuf数
+ * （如果空间不足，用于释放其他数据报）
+ * @return 释放的pbuf数量
+ */ 
 static int
 ip_reass_remove_oldest_datagram(struct ip_hdr *fraghdr, int pbufs_needed)
 {
@@ -230,8 +230,7 @@ ip_reass_remove_oldest_datagram(struct ip_hdr *fraghdr, int pbufs_needed)
   int pbufs_freed = 0, pbufs_freed_current;
   int other_datagrams;
 
-  /* Free datagrams until being allowed to enqueue 'pbufs_needed' pbufs,
-   * but don't free the datagram that 'fraghdr' belongs to! */
+  /* 释放数据报，直到pbuf被允许排队'pbufs_needed'pbufs，但不释放'fraghdr'所属的数据报！ */
   do {
     oldest = NULL;
     prev = NULL;
@@ -240,7 +239,7 @@ ip_reass_remove_oldest_datagram(struct ip_hdr *fraghdr, int pbufs_needed)
     r = reassdatagrams;
     while (r != NULL) {
       if (!IP_ADDRESSES_AND_ID_MATCH(&r->iphdr, fraghdr)) {
-        /* Not the same datagram as fraghdr */
+        /* 其他数据报 */
         other_datagrams++;
         if (oldest == NULL) {
           oldest = r;
