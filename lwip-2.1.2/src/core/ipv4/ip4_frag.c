@@ -331,23 +331,31 @@ ip_reass_dequeue_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev)
     reassdatagrams = ipr->next;
   } else {
     /* it wasn't the first, so it must have a valid 'prev' */
+    /* 它不是第一个，所以它必须有一个有效的'prev' */
     LWIP_ASSERT("sanity check linked list", prev != NULL);
     prev->next = ipr->next;
   }
 
   /* now we can free the ip_reassdata struct */
+  /* 现在我们可以释放ip_reassdata */ 
   memp_free(MEMP_REASSDATA, ipr);
 }
 
 /**
- * Chain a new pbuf into the pbuf list that composes the datagram.  The pbuf list
- * will grow over time as  new pbufs are rx.
- * Also checks that the datagram passes basic continuity checks (if the last
- * fragment was received at least once).
+ * Chain a new pbuf into the pbuf list that composes the datagram.  The pbuf listwill grow over time as  new pbufs are rx.
+ * Also checks that the datagram passes basic continuity checks (if the lastfragment was received at least once)
  * @param ipr points to the reassembly state
  * @param new_p points to the pbuf for the current fragment
  * @param is_last is 1 if this pbuf has MF==0 (ipr->flags not updated yet)
  * @return see IP_REASS_VALIDATE_* defines
+ */
+/**
+ * 将新的pbuf链接到组成数据报的pbuf列表中。随着新的pbuf是rx，pbuf列表会随着时间的推移而增长。
+ * 还检查数据报是否通过基本连续性检查（如果最后一个片段至少收到一次）
+ * @param ipr指向重组状态
+ * @param new_p指向当前片段的pbuf
+ * 如果此pbuf具有MF == 0（@pr->标志尚未更新），则@param is_last为1
+ * @return请参阅IP_REASS_VALIDATE_ *定义
  */
 static int
 ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct pbuf *new_p, int is_last)
