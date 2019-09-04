@@ -270,6 +270,12 @@ ip_reass_remove_oldest_datagram(struct ip_hdr *fraghdr, int pbufs_needed)
  * @param clen number of pbufs needed to enqueue (used for freeing other datagrams if not enough space)
  * @return A pointer to the queue location into which the fragment was enqueued
  */
+/**
+ * 将新片段排入片段队列
+ * @param fraghdr指向新的片段IP hdr
+ * @param清除入队所需的pbuf数量（用于释放其他数据报，如果没有足够的空间）
+ * @return指向片段入队的队列位置的指针
+ */ 
 static struct ip_reassdata *
 ip_reass_enqueue_new_datagram(struct ip_hdr *fraghdr, int clen)
 {
@@ -279,6 +285,7 @@ ip_reass_enqueue_new_datagram(struct ip_hdr *fraghdr, int clen)
 #endif
 
   /* No matching previous fragment found, allocate a new reassdata struct */
+  /* 找不到匹配的先前片段，分配一个新的reassdata结构 */
   ipr = (struct ip_reassdata *)memp_malloc(MEMP_REASSDATA);
   if (ipr == NULL) {
 #if IP_REASS_FREE_OLDEST
@@ -297,9 +304,11 @@ ip_reass_enqueue_new_datagram(struct ip_hdr *fraghdr, int clen)
   ipr->timer = IP_REASS_MAXAGE;
 
   /* enqueue the new structure to the front of the list */
+  /* 将新结构排入列表前面 */
   ipr->next = reassdatagrams;
   reassdatagrams = ipr;
   /* copy the ip header for later tests and input */
+  /* 复制ip头以便以后的测试和输入 */ 
   /* @todo: no ip options supported? */
   SMEMCPY(&(ipr->iphdr), fraghdr, IP_HLEN);
   return ipr;
@@ -309,6 +318,10 @@ ip_reass_enqueue_new_datagram(struct ip_hdr *fraghdr, int clen)
  * Dequeues a datagram from the datagram queue. Doesn't deallocate the pbufs.
  * @param ipr points to the queue entry to dequeue
  */
+/**
+ * 从数据报队列中出列数据报。不释放pbuf。
+ * @param ipr指向队列条目出列
+ */ 
 static void
 ip_reass_dequeue_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev)
 {
