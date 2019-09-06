@@ -380,7 +380,10 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
 
   /* overwrite the fragment's ip header from the pbuf with our helper struct,
    * and setup the embedded helper structure. */
+  /* 使用我们的helper struct从pbuf覆盖片段的ip头，
+   * 并设置嵌入式辅助结构。 */ 
   /* make sure the struct ip_reass_helper fits into the IP header */
+  /* 确保struct ip_reass_helper适合IP头 */
   LWIP_ASSERT("sizeof(struct ip_reass_helper) <= IP_HLEN",
               sizeof(struct ip_reass_helper) <= IP_HLEN);
   iprh = (struct ip_reass_helper *)new_p->payload;
