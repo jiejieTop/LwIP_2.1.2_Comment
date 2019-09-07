@@ -397,6 +397,8 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
 
   /* Iterate through until we either get to the end of the list (append),
    * or we find one with a larger offset (insert). */
+  /*迭代直到我们要么到达列表的末尾（追加），
+   *或者我们找到一个偏移量较大的插入（插入）。 */
   for (q = ipr->p; q != NULL;) {
     iprh_tmp = (struct ip_reass_helper *)q->payload;
     if (iprh->start < iprh_tmp->start) {
