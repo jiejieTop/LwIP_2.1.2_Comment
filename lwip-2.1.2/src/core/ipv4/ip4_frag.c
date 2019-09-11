@@ -402,6 +402,7 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
   for (q = ipr->p; q != NULL;) {
     iprh_tmp = (struct ip_reass_helper *)q->payload;
     if (iprh->start < iprh_tmp->start) {
+        /*新的pbuf应该在此之前插入*/
       /* the new pbuf should be inserted before this */
       iprh->next_pbuf = q;
       if (iprh_prev != NULL) {
