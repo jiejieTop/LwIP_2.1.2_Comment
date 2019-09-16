@@ -406,15 +406,18 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
       /* the new pbuf should be inserted before this */
       iprh->next_pbuf = q;
       if (iprh_prev != NULL) {
+        /* 不是偏移量最小的片段 */ 
         /* not the fragment with the lowest offset */
 #if IP_REASS_CHECK_OVERLAP
         if ((iprh->start < iprh_prev->end) || (iprh->end > iprh_tmp->start)) {
+          /* 片段与之前或之后重叠，扔掉 */
           /* fragment overlaps with previous or following, throw away */
           return IP_REASS_VALIDATE_PBUF_DROPPED;
         }
 #endif /* IP_REASS_CHECK_OVERLAP */
         iprh_prev->next_pbuf = new_p;
         if (iprh_prev->end != iprh->start) {
+         /* 当前之间缺少一个片段和之前的片段 */ 
           /* There is a fragment missing between the current
            * and the previous fragment */
           valid = 0;
@@ -422,6 +425,7 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
       } else {
 #if IP_REASS_CHECK_OVERLAP
         if (iprh->end > iprh_tmp->start) {
+          /* 片段与以下重叠，扔掉 */ 
           /* fragment overlaps with following, throw away */
           return IP_REASS_VALIDATE_PBUF_DROPPED;
         }
