@@ -435,10 +435,12 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
       }
       break;
     } else if (iprh->start == iprh_tmp->start) {
+        /* 两次收到相同的数据报：无需保留数据报 */
       /* received the same datagram twice: no need to keep the datagram */
       return IP_REASS_VALIDATE_PBUF_DROPPED;
 #if IP_REASS_CHECK_OVERLAP
     } else if (iprh->start < iprh_tmp->end) {
+        /* 重叠：无需保留新数据报 */
       /* overlap: no need to keep the new datagram */
       return IP_REASS_VALIDATE_PBUF_DROPPED;
 #endif /* IP_REASS_CHECK_OVERLAP */
