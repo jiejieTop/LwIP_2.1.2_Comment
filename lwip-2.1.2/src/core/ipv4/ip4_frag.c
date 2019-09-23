@@ -445,6 +445,7 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
       return IP_REASS_VALIDATE_PBUF_DROPPED;
 #endif /* IP_REASS_CHECK_OVERLAP */
     } else {
+      /* 检查到目前为止收到的碎片是否没有holes。 */
       /* Check if the fragments received so far have no holes. */
       if (iprh_prev != NULL) {
         if (iprh_prev->end != iprh_tmp->start) {
