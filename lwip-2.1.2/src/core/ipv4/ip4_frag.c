@@ -449,6 +449,7 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
       /* Check if the fragments received so far have no holes. */
       if (iprh_prev != NULL) {
         if (iprh_prev->end != iprh_tmp->start) {
+            /* 当前之间缺少一个片段和上一个片段 */ 
           /* There is a fragment missing between the current
            * and the previous fragment */
           valid = 0;
