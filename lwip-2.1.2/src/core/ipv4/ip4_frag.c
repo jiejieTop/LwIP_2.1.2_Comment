@@ -483,7 +483,9 @@ ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct 
   }
 
   /* At this point, the validation part begins: */
+  /*至此，验证部分开始：*/ 
   /* If we already received the last fragment */
+  /*如果我们已经收到最后一个片段*/
   if (is_last || ((ipr->flags & IP_REASS_FLAG_LASTFRAG) != 0)) {
     /* and had no holes so far */
     if (valid) {
