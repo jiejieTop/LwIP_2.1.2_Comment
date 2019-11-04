@@ -559,12 +559,12 @@ ip4_reass(struct pbuf *p)
   len = lwip_ntohs(IPH_LEN(fraghdr));
   hlen = IPH_HL_BYTES(fraghdr);
   if (hlen > len) {
-    /* invalid datagram */
+    /* 无效的数据报 */
     goto nullreturn;
   }
   len = (u16_t)(len - hlen);
 
-  /* Check if we are allowed to enqueue more datagrams. */
+  /* 检查是否允许我们加入更多数据报。 */
   clen = pbuf_clen(p);
   if ((ip_reass_pbufcount + clen) > IP_REASS_MAX_PBUFS) {
 #if IP_REASS_FREE_OLDEST
@@ -572,7 +572,7 @@ ip4_reass(struct pbuf *p)
         ((ip_reass_pbufcount + clen) > IP_REASS_MAX_PBUFS))
 #endif /* IP_REASS_FREE_OLDEST */
     {
-      /* No datagram could be freed and still too many pbufs enqueued */
+      /* 无法释放数据报，但仍然有太多的pbuf排队 */
       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip4_reass: Overflow condition: pbufct=%d, clen=%d, MAX=%d\n",
                                    ip_reass_pbufcount, clen, IP_REASS_MAX_PBUFS));
       IPFRAG_STATS_INC(ip_frag.memerr);
