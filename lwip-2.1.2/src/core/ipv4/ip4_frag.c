@@ -582,8 +582,7 @@ ip4_reass(struct pbuf *p)
     }
   }
 
-  /* Look for the datagram the fragment belongs to in the current datagram queue,
-   * remembering the previous in the queue for later dequeueing. */
+  /* 在当前数据报队列中查找该片段所属的数据报，记住队列中的前一个，以供以后出队。*/
   for (ipr = reassdatagrams; ipr != NULL; ipr = ipr->next) {
     /* Check if the incoming fragment matches the one currently present
        in the reassembly buffer. If so, we proceed with copying the
